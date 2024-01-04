@@ -8,8 +8,20 @@
     <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
+    <div id="menu" class="show">
+        <div class="play-btn" onclick="game.switchMode(MODES.PLAYING)">Play</div>
+    </div>
+    <div id="pause-menu">
+        <div class="menu-btn">Back To Menu</div>
+    </div>
     <script src="js/three.js"></script>
     <script src="js/orbit-controls.js"></script>
+    <script src="js/drag-controls.js"></script>
+    <script src="js/enums.js"></script>
+    <script src="js/texture-manager.js"></script>
+    <script src="js/transition.js"></script>
+    <script src="js/util.js"></script>
+    <script src="js/level.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
