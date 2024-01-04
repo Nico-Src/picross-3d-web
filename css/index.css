@@ -37,8 +37,23 @@ html,body{
     transition: opacity .2s ease;
 }
 
+#pause-btn{
+    position: fixed;
+    z-index: 20;
+    inset: 0;
+    top: 20px;
+    left: 20px;
+    width: fit-content;
+    height: fit-content;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+}
+
 #menu.show,
-#pause-menu.show{
+#pause-menu.show,
+#pause-btn.show{
     opacity: 1;
     pointer-events: all;
+    transform: translateX(0) translateY(0) scale(1);
 }

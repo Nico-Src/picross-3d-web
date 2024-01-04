@@ -12,7 +12,10 @@
         <div class="play-btn" onclick="game.switchMode(MODES.PLAYING)">Play</div>
     </div>
     <div id="pause-menu">
-        <div class="menu-btn">Back To Menu</div>
+        <div class="menu-btn" onclick="game.switchMode(MODES.MENU)">Back To Menu</div>
+    </div>
+    <div id="pause-btn" onclick="game.openPauseMenu();">
+        Pause
     </div>
     <script src="js/three.js"></script>
     <script src="js/orbit-controls.js"></script>

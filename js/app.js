@@ -1,5 +1,6 @@
 class Game{
     constructor(mode){
+        this.pauseBtn = document.querySelector('#pause-btn');
         this.menu = document.querySelector('#menu');
         this.pauseMenu = document.querySelector('#pause-menu');
 
@@ -377,6 +378,9 @@ class Game{
         switch(this.currentMode){
             case MODES.MENU:
                 this.menu.classList.add('show');
+                this.pauseBtn.classList.remove('show');
+                this.pauseMenu.classList.remove('show');
+
                 this.transitions.push(new Transition(this.gridHelper, 'scale', 0.0, 1.0, 'out', 0.03));
                 // reset level
                 for(const handle of this.level.layerHandles){
@@ -408,6 +412,8 @@ class Game{
                 break;
             case MODES.PLAYING:
                 this.menu.classList.remove('show');
+                this.pauseBtn.classList.add('show');
+                
                 // load level
                 this.level = await Level.loadFromFile('levels/level1.lvl');
                 this.transitions.push(new Transition(this.gridHelper, 'scale', 1.0, 0.0, 'out', 0.03));
@@ -535,6 +541,10 @@ class Game{
                 }
             }
         }
+    }
+
+    openPauseMenu(){
+        this.pauseMenu.classList.add('show');
     }
 }
 
