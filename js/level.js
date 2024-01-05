@@ -69,7 +69,7 @@ class Level{
             fetch(path).then((res) => res.text())
             .then((text) => {
                 // read line by line
-                let lines = text.split('\n');
+                let lines = text.split('\n').map((l)=>l.replaceAll('\r',''));
                 // first line is the size of the level (x y z)
                 const size = lines[0].split(' ').map((val)=>parseInt(val));
                 const level = new Level(size);
@@ -78,7 +78,7 @@ class Level{
                 let index = 1;
                 let layer = 0;
                 while(index < lines.length){
-                    for(let c = 0; c < lines[index].length - 1; c++){
+                    for(let c = 0; c < lines[index].length; c++){
                         // layer, z, x
                         level.blockMap[layer][(index-1) % level.size.z][c] = parseInt(lines[index][c]);
                     }
