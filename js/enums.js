@@ -1,7 +1,8 @@
 const MODES = {
     MENU: 0,
     PLAYING: 1,
-    EDITING: 2
+    LEVEL_SELECT: 2,
+    EDITING: 3,
 };
 
 const BLOCK_STATE = {

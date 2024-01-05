@@ -1,6 +1,8 @@
 class Game{
     constructor(mode){
+        this.levelSelectMenu = document.querySelector('#level-select');
         this.pauseBtn = document.querySelector('#pause-btn');
+        this.pauseBanner = document.querySelector('#pause-banner');
         this.menu = document.querySelector('#menu');
         this.pauseMenu = document.querySelector('#pause-menu');
 
@@ -46,6 +48,7 @@ class Game{
         };
 
         // set camera position
+        this.camera.position.x = -5;
         this.camera.position.y = 10;
         this.camera.position.z = 10;
 
@@ -64,6 +67,7 @@ class Game{
         this.gridHelper.scale.z = 0;
     }
 
+    // initialize event listeners
     initListeners(){
         // add resize listener
         window.addEventListener('resize', this.resize.bind(this), false);
@@ -72,6 +76,7 @@ class Game{
         document.addEventListener('mousedown', this.mouseDown.bind(this));
     }
 
+    // start rendering
     run(){
         this.animate();
     }
@@ -84,16 +89,19 @@ class Game{
         this.renderer.render(this.scene, this.camera);
     }
 
+    // resize handler
     resize(){
+        // update camera and renderer
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
+    // mouse down handler
     mouseDown(e){
         e.preventDefault();
         // nothing on left click
-        if(e.button === 0) return;
+        if(e.button === 0 || this.pauseMenu.classList.contains('show')) return;
 
         // calc 3d mouse vector
         const mouse3D = Util.pointToVector(e.clientX, e.clientY);    
@@ -151,6 +159,7 @@ class Game{
                 const y = Math.floor(obj.position.y);
                 const z = Math.floor(obj.position.z);
 
+                // add transition to clicked block
                 this.transitions.push(new Transition(obj, 'scale', 1.1, 1.0, 'in'));
                 // get materials
                 const materials = obj.material;
@@ -281,12 +290,14 @@ class Game{
         // create box and set position
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const block = new THREE.Mesh(geometry, materials);
+
         block.name = 'block';
         block.state = this.level.blockMap[y][z][x];
         block.marked = false;
         block.position.x = x + this.gridOffset;
         block.position.y = y + this.gridOffset;
         block.position.z = z + this.gridOffset;
+
         // check if block should be transitioned (scaled up)
         if(transition){
             block.scale.x = 0;
@@ -295,6 +306,7 @@ class Game{
         }
         this.level.blocks[x][y][z] = block;
         this.scene.add(block);
+
         // add upscale transition if block should be scaled up
         if(transition){
             setTimeout(()=>{
@@ -317,6 +329,7 @@ class Game{
             if(block.state === BLOCK_STATE.NON_DESTROYABLE && block.marked === false) nonMarkedBlocks++;
         }
 
+        // if there arent any destroyable blocks or non marked blocks left gray them out to show they are fixed now
         if(destroyableBlocks === 0 && nonMarkedBlocks === 0){
             for(let y1 = 0; y1 < this.level.size.y; y1++){
                 const block = this.level.blocks[x][y1][z];
@@ -338,6 +351,7 @@ class Game{
             if(block.state === BLOCK_STATE.NON_DESTROYABLE && block.marked === false) nonMarkedBlocks++;
         }
 
+        // if there arent any destroyable blocks or non marked blocks left gray them out to show they are fixed now
         if(destroyableBlocks === 0 && nonMarkedBlocks === 0){
             for(let x1 = 0; x1 < this.level.size.x; x1++){
                 const block = this.level.blocks[x1][y][z];
@@ -359,6 +373,7 @@ class Game{
             if(block.state === BLOCK_STATE.NON_DESTROYABLE && block.marked === false) nonMarkedBlocks++;
         }
 
+        // if there arent any destroyable blocks or non marked blocks left gray them out to show they are fixed now
         if(destroyableBlocks === 0 && nonMarkedBlocks === 0){
             for(let z1 = 0; z1 < this.level.size.z; z1++){
                 const block = this.level.blocks[x][y][z1];
@@ -371,18 +386,26 @@ class Game{
     }
 
     // switch mode (MENU, PLAY, EDIT)
-    async switchMode(mode){
+    async switchMode(mode, lvl){
         if(this.currentMode == mode) return;
         this.currentMode = mode;
 
         switch(this.currentMode){
             case MODES.MENU:
-                this.menu.classList.add('show');
-                this.pauseBtn.classList.remove('show');
-                this.pauseMenu.classList.remove('show');
+                this.controls.enabled = false;
+                // update dom elements
+                setTimeout(()=>{
+                    this.menu.classList.add('show');
+                    this.pauseBtn.classList.remove('show');
+                    this.pauseMenu.classList.remove('show');
+                    this.pauseBanner.classList.remove('show');
+                    this.levelSelectMenu.classList.remove('show');
+                }, 300);
 
+                // transition grid out
                 this.transitions.push(new Transition(this.gridHelper, 'scale', 0.0, 1.0, 'out', 0.03));
-                // reset level
+
+                // reset level and layer handles
                 for(const handle of this.level.layerHandles){
                     handle.handle.geometry.dispose();
                     handle.handle.material.dispose();
@@ -391,14 +414,20 @@ class Game{
                         this.scene.remove(handle.handle);
                     },400);
                 }
+
+                // disable and dispose drag controls 
                 this.dragControls.deactivate();
                 this.dragControls.dispose();
                 this.dragControls = undefined;
+
                 this.level.layerHandles = [];
                 this.level = undefined;
+
                 // remove all blocks
                 for(const obj of this.scene.children.filter(c => c.name === 'block')){
+                    // transition block out
                     this.transitions.push(new Transition(obj, 'scale', 0.0, 1.0, 'out', 0.02));
+                    // disable raycast so block doesnt block other blocks behind it while it transitions
                     obj.disableRaycast = true;
                     setTimeout(()=>{
                         // destroy block and dispose materials and geometry to not leak any memory
@@ -407,35 +436,43 @@ class Game{
                             mat.dispose();
                         });
                         this.scene.remove(obj);
-                    },400 + (10 * this.scene.children.indexOf(obj)));
+                    },400 + (10 * this.scene.children.indexOf(obj))); // small delay after each block
                 }
                 break;
             case MODES.PLAYING:
+                this.controls.enabled = true;
+                // update dom elements
                 this.menu.classList.remove('show');
                 this.pauseBtn.classList.add('show');
+                this.levelSelectMenu.classList.remove('show');
                 
                 // load level
-                this.level = await Level.loadFromFile('levels/level1.lvl');
+                this.level = await Level.loadFromFile('levels/' + lvl);
                 this.transitions.push(new Transition(this.gridHelper, 'scale', 1.0, 0.0, 'out', 0.03));
-                console.log(this.level)
 
                 // create box and set position
                 this.level.layerHandles.push(new LayerHandle(this.scene, 0x00FF00, {x: this.level.size.x, y: this.level.size.y + 1, z: this.level.size.z}, undefined, ['x','z']));
                 this.level.layerHandles.push(new LayerHandle(this.scene, 0xFF0000, {x: this.level.size.x, y: 0, z: this.level.size.z + 1}, {x: 90, y: 0, z: 0}, ['x','y']));
                 this.level.layerHandles.push(new LayerHandle(this.scene, 0x0000FF, {x: -1, y: 0, z: 0}, {x: 0, y: 0, z: 90}, ['y','z']));
 
+                // add drag controls to layer handles
                 this.dragControls = new THREE.DragControls(this.level.layerHandles.map(l => l.handle), this.camera, this.renderer.domElement);
 
-                // add event listener to highlight dragged objects
+                // drag start handler
                 this.dragControls.addEventListener('dragstart', (e) => {
+                    // set emissive color
                     e.object.material.emissive.set(0xaaaaaa);
+                    // disable orbit controls
                     this.controls.enabled = false;
+                    // set fixed positions for handle
                     for(const handle of this.level.layerHandles){
                         for(const key of Object.keys(handle.fixedPos)){
                             handle.handle.position[key] = handle.fixedPos[key];
                         }
                     }
                 });
+
+                // drag handler
                 this.dragControls.addEventListener('drag', (e) => {
                     for(const handle of this.level.layerHandles){
                         if(e.object.color === handle.color){
@@ -443,32 +480,49 @@ class Game{
                                 handle.handle.position[k] = Math.round(handle.handle.position[k]);
                                 // make sure handle doesnt go out of bounds
                                 if(handle.originPos[k] > 0){
+                                    // handle cant go past the original position (y and z axis)
                                     if(handle.handle.position[k] > handle.originPos[k]) handle.handle.position[k] = handle.originPos[k];
+                                    // calc diff between origin and current position
                                     let diff = handle.originPos[k] - handle.handle.position[k];
+                                    // max position is the level size (in the given axis) - 1
+                                    // if diff is greater move handle back
                                     if(diff > this.level.size[k] - 1){
                                         handle.handle.position[k] -= (this.level.size[k] - 1) - diff;
                                         diff = this.level.size[k] - 1;
                                     }
+                                    // update layers
                                     this.updateLayers(k, Math.abs(diff));
                                 } else {
+                                    // handle cant go past the original position (x axis)
                                     if(handle.handle.position[k] < handle.originPos[k]) handle.handle.position[k] = handle.originPos[k];
+                                    // calc diff between origin and current position
                                     let diff = handle.originPos[k] - handle.handle.position[k];
+                                    // max position is the level size (in the given axis) - 1
+                                    // if diff is smaller move handle back
                                     if(diff < -(this.level.size[k] - 1)){
                                         handle.handle.position[k] += (this.level.size[k] - 1) + diff;
                                         diff = -handle.handle.position[k] - 1;
                                     }
+                                    // update layers
                                     this.updateLayers(k, Math.abs(diff));
                                 }
                             });
                         }
+
+                        // set fixed positions for handle
                         for(const key of Object.keys(handle.fixedPos)){
                             handle.handle.position[key] = handle.fixedPos[key];
                         }
                     }
                 });
+
+                // drag end lisstener
                 this.dragControls.addEventListener('dragend', (e) => {
+                    // remove emissive color
                     e.object.material.emissive.set(0x000000);
+                    // enable rotate controls again
                     this.controls.enabled = true;
+                    // set fixed positions for handle
                     for(const handle of this.level.layerHandles){
                         for(const key of Object.keys(handle.fixedPos)){
                             handle.handle.position[key] = handle.fixedPos[key];
@@ -476,6 +530,7 @@ class Game{
                     }
                 });
 
+                // fade in handles
                 setTimeout(()=>{
                     this.transitions.push(new Transition(this.level.layerHandles[0].handle, 'opacity', 1.0, 0.0, 'out', 0.02));
                     this.transitions.push(new Transition(this.level.layerHandles[1].handle, 'opacity', 1.0, 0.0, 'out', 0.02));
@@ -494,9 +549,17 @@ class Game{
                     }
                 }
 
+                // set grid position and set orbit controls target
                 this.gridHelper.position.x = Math.floor(this.level.size.x / 2);
                 this.gridHelper.position.z = Math.floor(this.level.size.z / 2);
                 this.controls.target = this.gridHelper.position;
+                break;
+            case MODES.LEVEL_SELECT:
+                this.levelSelectMenu.classList.add('show');
+                this.menu.classList.remove('show');
+                this.pauseBtn.classList.remove('show');
+                this.pauseMenu.classList.remove('show');
+                this.pauseBanner.classList.remove('show');
                 break;
         }
     }
@@ -504,13 +567,17 @@ class Game{
     // update the visibility of layers at the given axis to the given extent (how many layers to hide)
     updateLayers(axis, extent){
         let block;
+        // iterate over all blocks
         for(let x = 0; x < this.level.size.x; x++){
             for(let y = 0; y < this.level.size.y; y++){
                 for(let z = 0; z < this.level.size.z; z++){
                     block = this.level.blocks[x][y][z];
+                    // if there is no block (removed already for example) skip iteration
                     if(!block) continue;
+                    // based on axis check if block should be shown or not (and based on that disable / enable raycast interaction)
                     switch(axis){
                         case 'x':
+                            // example: extent = 3, size = 4,4,4 | only the blocks with x < 3 will be hidden
                             if(x < extent){
                                 block.visible = false;
                                 block.disableRaycast = true;
@@ -543,8 +610,17 @@ class Game{
         }
     }
 
+    // open pause menu (dom element)
     openPauseMenu(){
+        this.controls.enabled = false;
         this.pauseMenu.classList.add('show');
+        this.pauseBanner.classList.add('show');
+    }
+
+    closePauseMenu(){
+        this.controls.enabled = true;
+        this.pauseMenu.classList.remove('show');
+        this.pauseBanner.classList.remove('show');
     }
 }
 
