@@ -1,5 +1,5 @@
 # A Picross 3D Web Clone. (WIP)
-[Play yourself](https://nico-src.github.io/VS-Code-Portfolio/projects/picross-3d/)<br>
+[Play yourself](https://nico-src.github.io/portfolio/projects/picross-3d/)<br>
 
 ## Level 2 Example
 > 
